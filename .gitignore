@@ -1,0 +1,8 @@
+.venv/
+.ruff_cache/
+__pycache__/
+prompteasy.egg-info/
+outputs/
+testcases/
+
+.env
