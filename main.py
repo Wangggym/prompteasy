@@ -2,6 +2,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from case_runner import run_case
 from datetime import datetime
+import argparse
 
 TESTCASES_DIR = 'testcases'
 OUTPUTS_DIR = 'outputs'
@@ -9,6 +10,11 @@ MAX_WORKERS = 4  # 可根据需要调整并发数
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Run test cases')
+    parser.add_argument('--case', type=str, help='Specific test case file to run')
+    parser.add_argument('--repeat', type=int, default=1, help='Number of times to repeat the test case')
+    args = parser.parse_args()
+
     # 创建带日期和时间戳的输出目录
     now = datetime.now()
     date_dir = now.strftime('%Y%m%d')
@@ -17,9 +23,20 @@ def main():
     os.makedirs(run_output_dir, exist_ok=True)
     print(f"[INFO] Output directory: {run_output_dir}")
 
-    case_files = [f for f in os.listdir(TESTCASES_DIR) if f.endswith('.json')]
-    case_paths = [os.path.join(TESTCASES_DIR, f) for f in case_files]
-    print(f"[INFO] Found {len(case_paths)} test cases.")
+    if args.case:
+        # Run specific test case
+        case_path = os.path.join(TESTCASES_DIR, args.case)
+        if not os.path.exists(case_path):
+            print(f"[ERROR] Test case {case_path} not found")
+            return
+        
+        case_paths = [case_path] * args.repeat
+        print(f"[INFO] Running test case {args.case} {args.repeat} times")
+    else:
+        # Run all test cases
+        case_files = [f for f in os.listdir(TESTCASES_DIR) if f.endswith('.json')]
+        case_paths = [os.path.join(TESTCASES_DIR, f) for f in case_files]
+        print(f"[INFO] Found {len(case_paths)} test cases.")
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {}

@@ -13,7 +13,15 @@ fix:
 	$(HIDE)ruff check --fix
 
 dev:
-	$(HIDE)uv run main.py	
+	$(HIDE)uv run main.py
+
+# Run a specific test case
+run-case:
+	$(HIDE)uv run main.py --case $(case) --repeat $(repeat)
+
+# Run all test cases
+run-all:
+	$(HIDE)uv run main.py
 
 
 
