@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import uuid
 from typing import Dict, List, Optional, Union, Any
 import requests
@@ -75,7 +76,9 @@ def run_case(case_path: str, outputs_dir: str) -> str:
         'passed': None  # 总体通过与否，后续补充
     }
     case_base: str = os.path.splitext(os.path.basename(case_path))[0]
-    output_path: str = os.path.join(outputs_dir, f"{safe_filename(case_base)}_output.json")
+    now = time.time()
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime(now)) + f"_{int((now % 1) * 1000):03d}"
+    output_path: str = os.path.join(outputs_dir, f"{safe_filename(case_base)}_output_{timestamp}.json")
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"    [INFO] Output written to {output_path}")
