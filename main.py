@@ -29,20 +29,33 @@ def main():
         if not os.path.exists(case_path):
             print(f"[ERROR] Test case {case_path} not found")
             return
-        
-        case_paths = [case_path] * args.repeat
+        # Read the test case file to check for independent_sessions field
+        with open(case_path, 'r', encoding='utf-8') as f:
+            case_data = f.read()
+        import json
+        case_json = json.loads(case_data)
+        case_independent_sessions = case_json.get('independent_sessions', False)
+        case_paths = [(case_path, case_independent_sessions)] * args.repeat
         print(f"[INFO] Running test case {args.case} {args.repeat} times")
     else:
         # Run all test cases
         case_files = [f for f in os.listdir(TESTCASES_DIR) if f.endswith('.json')]
-        case_paths = [os.path.join(TESTCASES_DIR, f) for f in case_files]
+        case_paths = []
+        for f in case_files:
+            case_path = os.path.join(TESTCASES_DIR, f)
+            with open(case_path, 'r', encoding='utf-8') as cf:
+                case_data = cf.read()
+            import json
+            case_json = json.loads(case_data)
+            case_independent_sessions = case_json.get('independent_sessions', False)
+            case_paths.append((case_path, case_independent_sessions))
         print(f"[INFO] Found {len(case_paths)} test cases.")
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {}
-        for case_path in case_paths:
-            print(f"[INFO] Submitting case: {case_path}")
-            futures[executor.submit(run_case, case_path, run_output_dir)] = case_path
+        for case_path, case_independent_sessions in case_paths:
+            print(f"[INFO] Submitting case: {case_path} (independent_sessions={case_independent_sessions})")
+            futures[executor.submit(run_case, case_path, run_output_dir, case_independent_sessions)] = case_path
         for i, future in enumerate(as_completed(futures), 1):
             case_path = futures[future]
             try:
