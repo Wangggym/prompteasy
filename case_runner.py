@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import uuid
 from typing import Dict, List, Optional, Union, Any
 import requests
@@ -27,12 +28,13 @@ def parse_url_params(url: str) -> Optional[Dict[str, List[str]]]:
     parsed = urlparse(url)
     return parse_qs(parsed.query) if parsed.query else None
 
-def run_case(case_path: str, outputs_dir: str) -> str:
+def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = False) -> str:
     """Run a test case and save the results.
     
     Args:
         case_path (str): Path to the test case JSON file
         outputs_dir (str): Directory to save the output results
+        independent_sessions (bool): Whether to use independent session_id for each request (now only set via test case JSON)
         
     Returns:
         str: Path to the output file
@@ -41,14 +43,20 @@ def run_case(case_path: str, outputs_dir: str) -> str:
         case_data: Dict[str, Any] = json.load(f)
     requests_list: List[Dict[str, Any]] = case_data.get('requests', [])
 
-    session_id: str = str(uuid.uuid4())
+    session_id: str = str(uuid.uuid4()) if not independent_sessions else None
     results: List[Dict[str, Any]] = []
     total: int = len(requests_list)
 
     for idx, req_body in enumerate(requests_list, 1):
         print(f"    [INFO] Running request {idx}/{total} for case '{os.path.basename(case_path)}'...")
         req_body = dict(req_body)
-        req_body['session_id'] = session_id
+        if independent_sessions:
+            req_body['session_id'] = str(uuid.uuid4())
+            print(f"    [INFO] Using independent session_id: {req_body['session_id']}")
+        else:
+            req_body['session_id'] = session_id
+            print(f"    [INFO] Using shared session_id: {session_id}")
+            
         params=parse_url_params(API_URL)
         print(params)
         response = requests.post(
@@ -75,7 +83,9 @@ def run_case(case_path: str, outputs_dir: str) -> str:
         'passed': None  # 总体通过与否，后续补充
     }
     case_base: str = os.path.splitext(os.path.basename(case_path))[0]
-    output_path: str = os.path.join(outputs_dir, f"{safe_filename(case_base)}_output.json")
+    now = time.time()
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime(now)) + f"_{int((now % 1) * 1000):03d}"
+    output_path: str = os.path.join(outputs_dir, f"{safe_filename(case_base)}_output_{timestamp}.json")
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"    [INFO] Output written to {output_path}")
