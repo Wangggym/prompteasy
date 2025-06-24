@@ -12,6 +12,7 @@ MAX_WORKERS = 4  # 可根据需要调整并发数
 def main():
     parser = argparse.ArgumentParser(description='Run test cases')
     parser.add_argument('--case', type=str, help='Specific test case file to run')
+    parser.add_argument('--case-keywords', type=str, nargs='*', help='Keywords to filter test case files (OR logic, fuzzy match)')
     parser.add_argument('--repeat', type=int, default=1, help='Number of times to repeat the test case')
     args = parser.parse_args()
 
@@ -37,6 +38,23 @@ def main():
         case_independent_sessions = case_json.get('independent_sessions', False)
         case_paths = [(case_path, case_independent_sessions)] * args.repeat
         print(f"[INFO] Running test case {args.case} {args.repeat} times")
+    elif args.case_keywords:
+        # Run test cases matching any of the keywords
+        case_files = [f for f in os.listdir(TESTCASES_DIR) if f.endswith('.json')]
+        filtered_files = [f for f in case_files if any(kw in f for kw in args.case_keywords)]
+        if not filtered_files:
+            print(f"[ERROR] No test cases found matching keywords: {args.case_keywords}")
+            return
+        case_paths = []
+        for f in filtered_files:
+            case_path = os.path.join(TESTCASES_DIR, f)
+            with open(case_path, 'r', encoding='utf-8') as cf:
+                case_data = cf.read()
+            import json
+            case_json = json.loads(case_data)
+            case_independent_sessions = case_json.get('independent_sessions', False)
+            case_paths.append((case_path, case_independent_sessions))
+        print(f"[INFO] Found {len(case_paths)} test cases matching keywords: {args.case_keywords}")
     else:
         # Run all test cases
         case_files = [f for f in os.listdir(TESTCASES_DIR) if f.endswith('.json')]

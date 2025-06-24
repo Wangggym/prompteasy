@@ -13,7 +13,7 @@ fix:
 	$(HIDE)ruff check --fix
 
 dev:
-	$(HIDE)uv run main.py
+	$(HIDE)uv run main.py --case-keywords $(filter-out $@,$(MAKECMDGOALS))
 
 # Run a specific test case
 run-case:
@@ -22,6 +22,9 @@ run-case:
 # Run all test cases
 run-all:
 	$(HIDE)uv run main.py
+
+%:
+	@:
 
 
 
