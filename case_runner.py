@@ -28,13 +28,14 @@ def parse_url_params(url: str) -> Optional[Dict[str, List[str]]]:
     parsed = urlparse(url)
     return parse_qs(parsed.query) if parsed.query else None
 
-def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = False) -> str:
+def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = False, url_override: Optional[str] = None) -> str:
     """Run a test case and save the results.
     
     Args:
         case_path (str): Path to the test case JSON file
         outputs_dir (str): Directory to save the output results
         independent_sessions (bool): Whether to use independent session_id for each request (now only set via test case JSON)
+        url_override (Optional[str]): Override URL to use instead of case file or environment default
         
     Returns:
         str: Path to the output file
@@ -42,6 +43,17 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
     with open(case_path, 'r', encoding='utf-8') as f:
         case_data: Dict[str, Any] = json.load(f)
     requests_list: List[Dict[str, Any]] = case_data.get('requests', [])
+
+    # Determine the URL to use with priority: url_override > case file url > environment API_URL
+    if url_override:
+        api_url = url_override
+        print(f"    [INFO] Using override URL: {api_url}")
+    elif 'url' in case_data:
+        api_url = case_data['url']
+        print(f"    [INFO] Using URL from case file: {api_url}")
+    else:
+        api_url = API_URL
+        print(f"    [INFO] Using environment default URL: {api_url}")
 
     session_id: str = str(uuid.uuid4()) if not independent_sessions else None
     results: List[Dict[str, Any]] = []
@@ -57,10 +69,10 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
             req_body['session_id'] = session_id
             print(f"    [INFO] Using shared session_id: {session_id}")
             
-        params=parse_url_params(API_URL)
+        params=parse_url_params(api_url)
         print(params)
         response = requests.post(
-            API_URL,
+            api_url,
             json=req_body,
             headers={'Content-Type': 'application/json'},
             params=params
@@ -70,6 +82,9 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
         except Exception:
             resp_content: str = response.text
         parsed_content: List[Any] = parse_response_content(resp_content)
+        # 只保留最后一个response_content对象
+        if parsed_content:
+            parsed_content = parsed_content[-1:]
         results.append({
             'request_index': idx,
             'request_body': req_body,
@@ -79,7 +94,7 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
         })
 
     output: Dict[str, Any] = {
-        'results': results,
+        'results': results,  
         'passed': None  # 总体通过与否，后续补充
     }
     case_base: str = os.path.splitext(os.path.basename(case_path))[0]

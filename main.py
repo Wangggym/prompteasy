@@ -14,6 +14,7 @@ def main():
     parser.add_argument('--case', type=str, help='Specific test case file to run')
     parser.add_argument('--case-keywords', type=str, nargs='*', help='Keywords to filter test case files (OR logic, fuzzy match)')
     parser.add_argument('--repeat', type=int, default=1, help='Number of times to repeat the test case')
+    parser.add_argument('--url', type=str, help='Override URL to use instead of case file or environment default')
     args = parser.parse_args()
 
     # 创建带日期和时间戳的输出目录
@@ -73,7 +74,7 @@ def main():
         futures = {}
         for case_path, case_independent_sessions in case_paths:
             print(f"[INFO] Submitting case: {case_path} (independent_sessions={case_independent_sessions})")
-            futures[executor.submit(run_case, case_path, run_output_dir, case_independent_sessions)] = case_path
+            futures[executor.submit(run_case, case_path, run_output_dir, case_independent_sessions, args.url)] = case_path
         for i, future in enumerate(as_completed(futures), 1):
             case_path = futures[future]
             try:
