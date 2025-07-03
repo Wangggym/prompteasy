@@ -20,7 +20,7 @@ def main():
     # 创建带日期和时间戳的输出目录
     now = datetime.now()
     date_dir = now.strftime('%Y%m%d')
-    time_dir = now.strftime('%H%M%S')
+    time_dir = now.strftime('%H%M%S%f')[:10]  # 增加四位毫秒精度
     run_output_dir = os.path.join(OUTPUTS_DIR, date_dir, time_dir)
     os.makedirs(run_output_dir, exist_ok=True)
     print(f"[INFO] Output directory: {run_output_dir}")

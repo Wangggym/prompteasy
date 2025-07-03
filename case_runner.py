@@ -15,6 +15,12 @@ API_URL: str = os.environ.get(
     ''
 )
 
+# Add token environment variable
+API_TOKEN: str = os.environ.get(
+    'API_TOKEN',
+    ''
+)
+
 def parse_url_params(url: str) -> Optional[Dict[str, List[str]]]:
     """Parse URL query parameters into a dictionary.
     
@@ -55,6 +61,14 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
         api_url = API_URL
         print(f"    [INFO] Using environment default URL: {api_url}")
 
+    # Determine the token to use with priority: case file token > environment API_TOKEN
+    if 'token' in case_data:
+        api_token = case_data['token']
+        print(f"    [INFO] Using token from case file")
+    else:
+        api_token = API_TOKEN
+        print(f"    [INFO] Using environment default token")
+
     session_id: str = str(uuid.uuid4()) if not independent_sessions else None
     results: List[Dict[str, Any]] = []
     total: int = len(requests_list)
@@ -71,10 +85,16 @@ def run_case(case_path: str, outputs_dir: str, independent_sessions: bool = Fals
             
         params=parse_url_params(api_url)
         print(params)
+        
+        # Prepare headers with token if available
+        headers = {'Content-Type': 'application/json'}
+        if api_token:
+            headers['Authorization'] = f'token {api_token}'
+        
         response = requests.post(
             api_url,
             json=req_body,
-            headers={'Content-Type': 'application/json'},
+            headers=headers,
             params=params
         )
         try:
